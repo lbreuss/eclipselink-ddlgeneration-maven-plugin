@@ -23,12 +23,25 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 
 import org.apache.maven.project.MavenProject;
+import org.eclipse.persistence.dynamic.DynamicClassLoader;
 
 
 /**
- *
+ * The EclipselinkDdlGenerationMojo generates DDL files from a persistence unit.
+ * <p>
+ * An EclipseLink EntityManager is instantiated to generate the DDL files by the standard
+ * JPA loading mechanism and the EclipseLink DDL generation process.
+ * <p>
+ * Note: The plugin needs to run in the process-classes phase after the compile phase,
+ * because the compile phase copies the /src/main/resources/ to /target/classes/,
+ * which per default is part of the classpath.
+ * <p>
+ * To run the plugin in an earlier phase, use inputDir to point at the root of your META-INF/persistence.xml
+ * 
  * @goal execute
- * @author jim
+ * @phase process-classes
+ * 
+ * @author jim, lbreuss
  */
 public class EclipselinkDdlGenerationMojo extends AbstractMojo {
 
@@ -80,6 +93,17 @@ public class EclipselinkDdlGenerationMojo extends AbstractMojo {
     private File outputDir;
 
     /**
+     * root directory where the persistence.xml is searched for.
+     * <p>
+     * E.g. to use a persistence unit <tt>src/main/resources/META-INF/persistence.xml</tt>, 
+     * specify inputDir as <tt>src/main/resources</tt>
+     * <p>
+     * Setting this input directory enables to use the plugin before the compile phase. 
+     * @parameter
+     */
+    private File inputDir;
+
+    /**
      * @parameter
      * @required
      */
@@ -98,11 +122,21 @@ public class EclipselinkDdlGenerationMojo extends AbstractMojo {
         File classesFile =
             new File(this.mavenProject.getBuild().getOutputDirectory());
 
-        urls.add(classesFile.toURI().toURL());
+        // if specified, add the inputDir to the classpath of the URLClassLoader, but not the target/classes/ dir.
+        if(inputDir != null) {
+            urls.add(inputDir.toURI().toURL());
+        } else {
+            urls.add(classesFile.toURI().toURL());	
+        }
+        
+        ClassLoader urlClassLoader = new URLClassLoader(
+                urls.toArray(new URL[urls.size()]),
+                Thread.currentThread().getContextClassLoader());
+        
+        // for Entities with access="VIRTUAL", the EclipseLink DynamicClassLoader is needed.
+        DynamicClassLoader dynClassLoader = new DynamicClassLoader(urlClassLoader);
 
-        return new URLClassLoader(
-            urls.toArray(new URL[urls.size()]),
-            Thread.currentThread().getContextClassLoader());
+        return dynClassLoader;
     }
 
     /**
