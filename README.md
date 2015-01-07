@@ -1,6 +1,8 @@
 eclipselink-ddlgeneration-maven-plugin
 ======================================
 
+Site docu on http://lbreuss.github.io/eclipselink-ddlgeneration-maven-plugin/
+
 fork from https://code.google.com/p/eclipselink-ddlgeneration-maven-plugin/
 
 additional feature:
