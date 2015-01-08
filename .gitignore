@@ -1,2 +1,6 @@
+/target/
 .idea
-target
+.classpath
+.project
+.settings/
+\$jarplug.work/
